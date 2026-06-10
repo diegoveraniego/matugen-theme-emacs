@@ -27,13 +27,48 @@ You can install and configure `matugen-theme` using `use-package` and `package-v
     
   :custom
   ;; Point this to the configuration file Matugen continually overwrites.
-  ;; Example path:
-  (matugen-theme-colors-file (expand-file-name "~/.config/ghostty/themes/dankcolors"))
+  ;; By default, the package looks for:
+  (matugen-theme-colors-file (expand-file-name "~/.config/emacs/matugen-colors.conf"))
   
   :config
   ;; Enable the global minor mode to start watching the directory.
   (matugen-theme-mode 1))
 ```
+
+## Matugen Template Configuration
+
+For `matugen-theme` to work, you must instruct Matugen (or Dank Linux) to generate a colour file formatted for Emacs whenever your wallpaper or theme changes.
+
+1. **Create the Emacs Template**
+   Create a new file at `~/.config/matugen/templates/emacs-colors.conf` (or wherever you store your Matugen templates) and add the following content:
+
+   ```jinja
+   background = {{colors.background.default.hex}}
+   foreground = {{colors.on_surface.default.hex}}
+   selection-background = {{colors.secondary_fixed_dim.default.hex}}
+   palette = 0={{dank16.color0.default.hex}}
+   palette = 1={{dank16.color1.default.hex}}
+   palette = 2={{dank16.color2.default.hex}}
+   palette = 3={{dank16.color3.default.hex}}
+   palette = 4={{dank16.color4.default.hex}}
+   palette = 5={{dank16.color5.default.hex}}
+   palette = 6={{dank16.color6.default.hex}}
+   palette = 7={{dank16.color7.default.hex}}
+   ```
+   *(Note: If you are not using `dank16`, you can replace the `dank16` variables with standard Matugen colour names).*
+
+2. **Register the Template in Matugen**
+   Edit your Matugen configuration file (usually `~/.config/matugen/config.toml`) and append the new template definition under the `[config]` section. Remember to use absolute paths:
+
+   ```toml
+   [config]
+
+   [templates.emacs]
+   input_path = '/home/username/.config/matugen/templates/emacs-colors.conf'
+   output_path = '/home/username/.config/emacs/matugen-colors.conf'
+   ```
+
+Once configured, any time Matugen recalculates colours (such as when DankMaterialShell switches wallpapers), it will silently generate `~/.config/emacs/matugen-colors.conf`. Emacs will detect this change and smoothly transition your theme.
 
 ## How it works
 
