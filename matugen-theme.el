@@ -4,7 +4,7 @@
 
 ;; Author: Diego
 ;; Maintainer: Diego
-;; Version: 0.4.0
+;; Version: 0.5.0
 ;; Package-Requires: ((emacs "28.1") (modus-themes "4.0"))
 ;; Keywords: themes, matugen, wayland, ricing
 
@@ -13,7 +13,8 @@
 ;; Este paquete permite integrar la paleta de colores de Ghostty (dankcolors)
 ;; generada por Matugen/Wallust en Adank Linux directamente con Emacs.
 ;; Incorpora ajustes de legibilidad (aclarado/oscurecido) para mantener el
-;; contraste AAA de Modus Themes.
+;; contraste AAA de Modus Themes, y detección de luminancia para cambiar de
+;; modo claro a oscuro automáticamente.
 
 ;;; Code:
 
@@ -55,14 +56,21 @@ Si LIGHTEN es no-nil aclara, si es nil oscurece."
       (color-lighten-name hex percent)
     (color-darken-name hex percent)))
 
+(defun matugen-theme--is-dark-color (hex)
+  "Retorna t si el color HEX es oscuro basándose en luminancia."
+  (let* ((rgb (color-name-to-rgb hex))
+         (r (nth 0 rgb))
+         (g (nth 1 rgb))
+         (b (nth 2 rgb))
+         ;; Fórmula simple de luminancia para sRGB (0.0 a 1.0)
+         (lum (+ (* 0.299 r) (* 0.587 g) (* 0.114 b))))
+    (< lum 0.5)))
+
 ;;;###autoload
 (defun matugen-theme-reload ()
   "Recarga la paleta leyendo el archivo dankcolors y aplicándolo a modus-themes."
   (interactive)
-  (let ((colors (matugen-theme--read-dankcolors))
-        (base-theme (if (memq 'modus-operandi custom-enabled-themes)
-                        'modus-operandi
-                      'modus-vivendi)))
+  (let ((colors (matugen-theme--read-dankcolors)))
     (when colors
       (let* ((bg (cdr (assq 'background colors)))
              (fg (cdr (assq 'foreground colors)))
@@ -73,17 +81,27 @@ Si LIGHTEN es no-nil aclara, si es nil oscurece."
              (green (cdr (assq 'palette-2 colors)))     ;; Green
              (yellow (cdr (assq 'palette-3 colors)))    ;; Yellow
              
-             ;; Lógica de Legibilidad: 
-             ;; Si es oscuro (vivendi), aclaramos el fondo para bg-dim y bg-alt.
-             ;; Si es claro (operandi), lo oscurecemos.
-             (is-dark (eq base-theme 'modus-vivendi))
+             ;; Lógica de Tema Automático: 
+             ;; Determinamos si la paleta que exportó Linux es oscura o clara
+             ;; calculando la luminancia del color 'background'.
+             (is-dark (matugen-theme--is-dark-color bg))
+             ;; En base a eso, obligamos a Emacs a adoptar el tema adecuado.
+             (base-theme (if is-dark 'modus-vivendi 'modus-operandi))
+             
              (bg-dim (matugen-theme--mod-color bg 5 is-dark))
              (bg-alt (matugen-theme--mod-color bg 10 is-dark))
              (bg-active (matugen-theme--mod-color bg 15 is-dark))
              
+             ;; Para las barras y el cursor, queremos variaciones notorias del fondo
+             (bg-hl (matugen-theme--mod-color bg 8 is-dark))
+             (bg-region (matugen-theme--mod-color bg 20 is-dark))
+             (bg-mode-active (matugen-theme--mod-color bg 25 is-dark))
+             (bg-mode-inactive (matugen-theme--mod-color bg 12 is-dark))
+             (border-mode (matugen-theme--mod-color bg 30 is-dark))
+             
              (fg-dim (matugen-theme--mod-color fg 20 (not is-dark))))
         
-        ;; Ajuste de paleta con cálculos matemáticos para salvar la legibilidad Modus
+        ;; Ajuste de paleta con cálculos matemáticos
         (setq modus-themes-common-palette-overrides
               `((bg-main ,bg)
                 (fg-main ,fg)
@@ -94,6 +112,14 @@ Si LIGHTEN es no-nil aclara, si es nil oscurece."
                 (border ,bg-alt)
                 (fg-dim ,fg-dim)
                 
+                ;; Resaltados e Interfaz Inferior
+                (bg-hl-line ,bg-hl)
+                (bg-region ,bg-region)
+                (bg-mode-line-active ,bg-mode-active)
+                (bg-mode-line-inactive ,bg-mode-inactive)
+                (border-mode-line-active ,border-mode)
+                (border-mode-line-inactive ,border-mode)
+                
                 ;; Colores semánticos base
                 (blue ,primary)
                 (cyan ,secondary)
@@ -102,7 +128,7 @@ Si LIGHTEN es no-nil aclara, si es nil oscurece."
                 (green ,green)
                 (yellow ,yellow)
                 
-                ;; Variantes para legibilidad en sintaxis de código
+                ;; Variantes para legibilidad
                 (blue-cooler ,(matugen-theme--mod-color primary 15 nil))
                 (blue-warmer ,(matugen-theme--mod-color primary 15 t))
                 (magenta-cooler ,(matugen-theme--mod-color tertiary 15 nil))
@@ -114,10 +140,10 @@ Si LIGHTEN es no-nil aclara, si es nil oscurece."
                 (yellow-cooler ,(matugen-theme--mod-color yellow 15 nil))
                 (yellow-warmer ,(matugen-theme--mod-color yellow 15 t))))
         
-        (disable-theme base-theme)
+        ;; Limpiamos TODOS los temas para evitar que caras antiguas colisionen (el "bug del cursor oscuro")
+        (mapc #'disable-theme custom-enabled-themes)
         (modus-themes-load-theme base-theme)
         
-        ;; Forzar a Doom Emacs a actualizar sus paquetes UI (Solaire-mode, etc)
         (when (fboundp 'doom/reload-theme)
           (doom/reload-theme))
         (when (featurep 'solaire-mode)
