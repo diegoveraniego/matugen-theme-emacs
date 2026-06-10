@@ -4,7 +4,7 @@
 
 ;; Author: Diego
 ;; Maintainer: Diego
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; Package-Requires: ((emacs "28.1") (modus-themes "4.0"))
 ;; Keywords: themes, matugen, wayland, ricing
 
@@ -79,7 +79,16 @@
                 (blue-warmer ,secondary)
                 (magenta-cooler ,tertiary)))
         
+        (disable-theme base-theme)
         (modus-themes-load-theme base-theme)
+        
+        ;; Forzar a Doom Emacs a actualizar sus propios paquetes y buffers (como Solaire-mode)
+        (when (fboundp 'doom/reload-theme)
+          (doom/reload-theme))
+        (when (featurep 'solaire-mode)
+          (solaire-global-mode -1)
+          (solaire-global-mode 1))
+          
         (message "Matugen (Dank Linux): Paleta de colores aplicada.")))))
 
 (defun matugen-theme--watcher-callback (event)
