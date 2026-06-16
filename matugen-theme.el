@@ -41,9 +41,11 @@ It expects a key-value format typically used for terminal emulators."
 (defcustom matugen-theme-style 'full
   "Style of the Matugen integration.
 - 'full: Override both backgrounds and accents using Matugen colours.
-- 'accent: Keep the native Modus Themes backgrounds, but inject Matugen accent colours."
+- 'accent: Keep the native Modus Themes backgrounds, but inject Matugen accent colours.
+- 'background: Inject Matugen backgrounds, but keep native Modus accent colours for optimal code syntax reading."
   :type '(choice (const :tag "Full (Backgrounds & Accents)" full)
-                 (const :tag "Accent only (Native backgrounds)" accent))
+                 (const :tag "Accent only (Native backgrounds)" accent)
+                 (const :tag "Background only (Native syntax accents)" background))
   :group 'matugen-theme)
 
 (defun matugen-theme--get-file-path ()
@@ -223,9 +225,9 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
                   (border-mode-line-inactive ,border-mode))))
           
           (setq modus-themes-common-palette-overrides
-                (if (eq matugen-theme-style 'accent)
-                    accent-overrides
-                  (append bg-overrides accent-overrides))))
+                (cond ((eq matugen-theme-style 'accent) accent-overrides)
+                      ((eq matugen-theme-style 'background) bg-overrides)
+                      (t (append bg-overrides accent-overrides)))))
         
         ;; Purge all currently active themes to prevent face clashing
         (mapc #'disable-theme custom-enabled-themes)
