@@ -63,16 +63,37 @@ It expects a key-value format typically used for terminal emulators."
             (push (cons (intern (format "palette-%s" (match-string 1))) (match-string 2)) colors)))
         colors))))
 
+(defun matugen-theme--hex-to-rgb (hex)
+  "Convert a 6-character HEX colour to an RGB list (0.0 - 1.0) independent of the frame."
+  (let ((r (/ (string-to-number (substring hex 1 3) 16) 255.0))
+        (g (/ (string-to-number (substring hex 3 5) 16) 255.0))
+        (b (/ (string-to-number (substring hex 5 7) 16) 255.0)))
+    (list r g b)))
+
+(defun matugen-theme--rgb-to-hex (rgb)
+  "Convert an RGB list (0.0 - 1.0) back to a 6-character HEX string."
+  (format "#%02x%02x%02x"
+          (max 0 (min 255 (round (* (nth 0 rgb) 255))))
+          (max 0 (min 255 (round (* (nth 1 rgb) 255))))
+          (max 0 (min 255 (round (* (nth 2 rgb) 255))))))
+
 (defun matugen-theme--mod-color (hex percent lighten)
   "Lighten or darken a HEX colour by PERCENT (0-100).
-If LIGHTEN is non-nil, the colour is lightened; otherwise, darkened."
-  (if lighten
-      (color-lighten-name hex percent)
-    (color-darken-name hex percent)))
+If LIGHTEN is non-nil, the colour is lightened; otherwise, darkened.
+Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
+  (let* ((rgb (matugen-theme--hex-to-rgb hex))
+         (hsl (apply #'color-rgb-to-hsl rgb))
+         (h (nth 0 hsl))
+         (s (nth 1 hsl))
+         (l (nth 2 hsl))
+         (new-l (if lighten (+ l (/ percent 100.0)) (- l (/ percent 100.0))))
+         (clamped-l (max 0.0 (min 1.0 new-l)))
+         (new-rgb (apply #'color-hsl-to-rgb h s clamped-l)))
+    (matugen-theme--rgb-to-hex new-rgb)))
 
 (defun matugen-theme--is-dark-color (hex)
   "Return non-nil if HEX is a dark colour based on relative luminance."
-  (let* ((rgb (color-name-to-rgb hex))
+  (let* ((rgb (matugen-theme--hex-to-rgb hex))
          (r (nth 0 rgb))
          (g (nth 1 rgb))
          (b (nth 2 rgb))
