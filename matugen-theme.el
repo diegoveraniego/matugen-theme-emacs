@@ -130,7 +130,7 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
          (r (nth 0 rgb-hex))
          (g (nth 1 rgb-hex))
          (b (nth 2 rgb-hex)))
-    (matugen-theme--relative-luminance r g b)))
+    (< (matugen-theme--relative-luminance r g b) 0.5)))
 
 (defun matugen-theme--relative-luminance (r g b)
   "Calculate relative luminance."
@@ -284,9 +284,15 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
                     ((memq matugen-theme-style '(harmonized neon)) (append bg-overrides accent-overrides))
                     (t (append bg-overrides accent-overrides)))))
         
+        ;; Force Emacs frame parameter to match the theme so Modus internal faces render correctly
+        (set-frame-parameter nil 'background-mode (if is-dark 'dark 'light))
+        (set-terminal-parameter nil 'background-mode (if is-dark 'dark 'light))
+        
         ;; Purge all currently active themes to prevent face clashing
         (mapc #'disable-theme custom-enabled-themes)
-        (modus-themes-load-theme base-theme)
+        
+        ;; Load the appropriate Modus base
+        (load-theme base-theme t)
         
         (when (fboundp 'doom/reload-theme)
           (doom/reload-theme))
