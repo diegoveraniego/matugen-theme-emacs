@@ -210,7 +210,7 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
         (when (file-exists-p (matugen-theme--get-file-path))
           (if after-init-time
               (matugen-theme-reload)
-            (add-hook 'emacs-startup-hook #'matugen-theme-reload)))
+            (add-hook 'window-setup-hook #'matugen-theme-reload)))
         
         (unless matugen-theme--file-watch-descriptor
           (let ((dir (file-name-directory (matugen-theme--get-file-path))))
