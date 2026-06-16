@@ -473,23 +473,18 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
 (define-minor-mode matugen-theme-mode
   "Global minor mode to synchronise Emacs with Matugen generated palettes."
   :global t
-  :lighter " Matugen"
+  :lighter nil
   (if matugen-theme-mode
-      (progn
-        (when (file-exists-p (matugen-theme--get-file-path))
+      (let ((dir (file-name-directory (matugen-theme--get-file-path))))
+        (when (file-exists-p dir)
+          ;; Initial load delayed until UI frame is ready
           (if after-init-time
               (matugen-theme-reload)
-            ;; Doom Emacs delays theme loading to its own hook. We must run AFTER it.
-            (if (boundp 'doom-init-ui-hook)
-                (add-hook 'doom-init-ui-hook #'matugen-theme-reload t)
-              (add-hook 'emacs-startup-hook
-                        (lambda () (run-with-idle-timer 0.1 nil #'matugen-theme-reload))))))
-        
-        (unless matugen-theme--file-watch-descriptor
-          (let ((dir (file-name-directory (matugen-theme--get-file-path))))
-            (unless (file-exists-p dir)
-              (make-directory dir t))
-            (setq matugen-theme--file-watch-descriptor
+            (add-hook 'after-init-hook #'matugen-theme-reload))
+          
+          ;; Setup file watcher
+          (setq matugen-theme--file-watch-descriptor
+                (when (fboundp 'file-notify-add-watch)
                   (file-notify-add-watch dir
                                          '(change attribute-change)
                                          #'matugen-theme--watcher-callback)))))
