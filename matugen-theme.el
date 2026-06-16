@@ -175,9 +175,11 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
   (interactive)
   (let ((colors (matugen-theme--read-palette)))
     (when colors
-      (let* ((is-dark (eq (frame-parameter nil 'background-mode) 'dark))
+      (let* ((bg-raw (or (cdr (assoc 'background colors)) "#000000"))
+             ;; Rely on pure math of the generated background color to detect dark mode instead of unreliable frame-parameters at startup
+             (is-dark (matugen-theme--is-dark-color bg-raw))
              
-             (bg (or (cdr (assoc 'background colors)) (if is-dark "#000000" "#ffffff")))
+             (bg (if is-dark bg-raw (or (cdr (assoc 'background colors)) "#ffffff")))
              (fg-main (or (cdr (assoc 'foreground colors)) (if is-dark "#ffffff" "#000000")))
              
              (use-harm (eq matugen-theme-style 'harmonized))
