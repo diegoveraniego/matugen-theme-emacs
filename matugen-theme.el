@@ -101,6 +101,37 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
          (lum (+ (* 0.299 r) (* 0.587 g) (* 0.114 b))))
     (< lum 0.5)))
 
+(defun matugen-theme--luminance (hex)
+  "Calculate relative luminance of a HEX colour."
+  (let* ((rgb (matugen-theme--hex-to-rgb hex))
+         (r (nth 0 rgb))
+         (g (nth 1 rgb))
+         (b (nth 2 rgb))
+         (sR (if (<= r 0.03928) (/ r 12.92) (expt (/ (+ r 0.055) 1.055) 2.4)))
+         (sG (if (<= g 0.03928) (/ g 12.92) (expt (/ (+ g 0.055) 1.055) 2.4)))
+         (sB (if (<= b 0.03928) (/ b 12.92) (expt (/ (+ b 0.055) 1.055) 2.4))))
+    (+ (* 0.2126 sR) (* 0.7152 sG) (* 0.0722 sB))))
+
+(defun matugen-theme--contrast-ratio (hex1 hex2)
+  "Calculate WCAG contrast ratio between two HEX colours."
+  (let* ((lum1 (matugen-theme--luminance hex1))
+         (lum2 (matugen-theme--luminance hex2))
+         (l1 (max lum1 lum2))
+         (l2 (min lum1 lum2)))
+    (/ (+ l1 0.05) (+ l2 0.05))))
+
+(defun matugen-theme--ensure-contrast (hex bg-hex is-dark target-ratio)
+  "Adjust HEX until it has at least TARGET-RATIO contrast against BG-HEX."
+  (let ((current-hex hex)
+        (ratio (matugen-theme--contrast-ratio hex bg-hex))
+        (iterations 0)
+        (max-iterations 20))
+    (while (and (< ratio target-ratio) (< iterations max-iterations))
+      (setq current-hex (matugen-theme--mod-color current-hex 5 is-dark))
+      (setq ratio (matugen-theme--contrast-ratio current-hex bg-hex))
+      (setq iterations (1+ iterations)))
+    current-hex))
+
 ;;;###autoload
 (defun matugen-theme-reload ()
   "Reload the Matugen palette and apply overrides to Modus Themes."
@@ -108,18 +139,26 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
   (let ((colors (matugen-theme--read-palette)))
     (when colors
       (let* ((bg (cdr (assq 'background colors)))
-             (fg (cdr (assq 'foreground colors)))
-             (primary (cdr (assq 'palette-4 colors)))   ;; Blue
-             (secondary (cdr (assq 'palette-6 colors))) ;; Cyan
-             (tertiary (cdr (assq 'palette-5 colors)))  ;; Magenta
-             (error (cdr (assq 'palette-1 colors)))     ;; Red
-             (green (cdr (assq 'palette-2 colors)))     ;; Green
-             (yellow (cdr (assq 'palette-3 colors)))    ;; Yellow
-             
              ;; Automatic Theme Logic:
              ;; Determine if the external palette is dark or light by
              ;; calculating the luminance of the base background colour.
              (is-dark (matugen-theme--is-dark-color bg))
+             
+             (fg-main (or (cdr (assoc 'foreground colors)) (if is-dark "#ffffff" "#000000")))
+             
+             (red-raw (or (cdr (assoc 'red colors)) (cdr (assoc 'palette-1 colors)) bg))
+             (red (matugen-theme--ensure-contrast red-raw bg is-dark 4.5))
+             (green-raw (or (cdr (assoc 'green colors)) (cdr (assoc 'palette-2 colors)) bg))
+             (green (matugen-theme--ensure-contrast green-raw bg is-dark 4.5))
+             (yellow-raw (or (cdr (assoc 'yellow colors)) (cdr (assoc 'palette-3 colors)) bg))
+             (yellow (matugen-theme--ensure-contrast yellow-raw bg is-dark 4.5))
+             (blue-raw (or (cdr (assoc 'blue colors)) (cdr (assoc 'palette-4 colors)) bg))
+             (blue (matugen-theme--ensure-contrast blue-raw bg is-dark 4.5))
+             (magenta-raw (or (cdr (assoc 'magenta colors)) (cdr (assoc 'palette-5 colors)) bg))
+             (magenta (matugen-theme--ensure-contrast magenta-raw bg is-dark 4.5))
+             (cyan-raw (or (cdr (assoc 'cyan colors)) (cdr (assoc 'palette-6 colors)) bg))
+             (cyan (matugen-theme--ensure-contrast cyan-raw bg is-dark 4.5))
+             
              ;; Force Emacs to adopt the appropriate Modus base theme.
              (base-theme (if is-dark 'modus-vivendi 'modus-operandi))
              
