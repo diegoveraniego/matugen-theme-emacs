@@ -43,11 +43,13 @@ It expects a key-value format typically used for terminal emulators."
 - 'full: Override both backgrounds and accents using Matugen colours.
 - 'accent: Keep the native Modus Themes backgrounds, but inject Matugen accent colours.
 - 'background: Inject Matugen backgrounds, but keep native Modus accent colours for optimal code syntax reading.
-- 'harmonized: Inject Matugen backgrounds, and tint the native Modus syntax colours with the background for aesthetic harmony without losing readability."
+- 'harmonized: Inject Matugen backgrounds, and tint the native Modus syntax colours with the background for aesthetic harmony without losing readability.
+- 'neon: Maximum saturation terminal-style colours that jump out against the background for cyberpunk coding speed."
   :type '(choice (const :tag "Full (Backgrounds & Accents)" full)
                  (const :tag "Accent only (Native backgrounds)" accent)
                  (const :tag "Background only (Native syntax accents)" background)
-                 (const :tag "Harmonized (Tinted syntax & Backgrounds)" harmonized))
+                 (const :tag "Harmonized (Tinted syntax & Backgrounds)" harmonized)
+                 (const :tag "Neon (100% Saturation Terminal Syntax)" neon))
   :group 'matugen-theme)
 
 (defun matugen-theme--get-file-path ()
@@ -98,6 +100,15 @@ An ALPHA of 1.0 returns exactly HEX1. An ALPHA of 0.0 returns exactly HEX2."
          (g (+ (* (nth 1 rgb1) alpha) (* (nth 1 rgb2) (- 1.0 alpha))))
          (b (+ (* (nth 2 rgb1) alpha) (* (nth 2 rgb2) (- 1.0 alpha)))))
     (matugen-theme--rgb-to-hex (list r g b))))
+
+(defun matugen-theme--neonize (hex is-dark)
+  "Make a colour intensely vibrant and bright for dark modes, or deep for light modes."
+  (let* ((rgb (matugen-theme--hex-to-rgb hex))
+         (hsl (apply #'color-rgb-to-hsl rgb))
+         (h (nth 0 hsl))
+         (s 1.0)
+         (l (if is-dark 0.75 0.35)))
+    (matugen-theme--rgb-to-hex (color-hsl-to-rgb h s l))))
 
 (defun matugen-theme--mod-color (hex percent lighten)
   "Lighten or darken a HEX colour by PERCENT (0-100).
@@ -169,6 +180,7 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
              (fg-main (or (cdr (assoc 'foreground colors)) (if is-dark "#ffffff" "#000000")))
              
              (use-harm (eq matugen-theme-style 'harmonized))
+             (use-neon (eq matugen-theme-style 'neon))
              
              (modus-red (if is-dark "#ff5f59" "#a60000"))
              (modus-green (if is-dark "#44df44" "#006800"))
@@ -177,29 +189,35 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
              (modus-magenta (if is-dark "#fe46ba" "#721045"))
              (modus-cyan (if is-dark "#00d3d0" "#005e8b"))
              
-             (red-raw (if use-harm (matugen-theme--blend modus-red bg 0.70)
-                        (or (cdr (assoc 'red colors)) (cdr (assoc 'palette-1 colors)) bg)))
-             (red (matugen-theme--ensure-contrast red-raw bg is-dark 4.5))
+             (red-raw (cond (use-harm (matugen-theme--blend modus-red bg 0.70))
+                            (use-neon (matugen-theme--neonize modus-red is-dark))
+                            (t (or (cdr (assoc 'red colors)) (cdr (assoc 'palette-1 colors)) bg))))
+             (red (if use-neon red-raw (matugen-theme--ensure-contrast red-raw bg is-dark 4.5)))
              
-             (green-raw (if use-harm (matugen-theme--blend modus-green bg 0.70)
-                          (or (cdr (assoc 'green colors)) (cdr (assoc 'palette-2 colors)) bg)))
-             (green (matugen-theme--ensure-contrast green-raw bg is-dark 4.5))
+             (green-raw (cond (use-harm (matugen-theme--blend modus-green bg 0.70))
+                              (use-neon (matugen-theme--neonize modus-green is-dark))
+                              (t (or (cdr (assoc 'green colors)) (cdr (assoc 'palette-2 colors)) bg))))
+             (green (if use-neon green-raw (matugen-theme--ensure-contrast green-raw bg is-dark 4.5)))
              
-             (yellow-raw (if use-harm (matugen-theme--blend modus-yellow bg 0.70)
-                           (or (cdr (assoc 'yellow colors)) (cdr (assoc 'palette-3 colors)) bg)))
-             (yellow (matugen-theme--ensure-contrast yellow-raw bg is-dark 4.5))
+             (yellow-raw (cond (use-harm (matugen-theme--blend modus-yellow bg 0.70))
+                               (use-neon (matugen-theme--neonize modus-yellow is-dark))
+                               (t (or (cdr (assoc 'yellow colors)) (cdr (assoc 'palette-3 colors)) bg))))
+             (yellow (if use-neon yellow-raw (matugen-theme--ensure-contrast yellow-raw bg is-dark 4.5)))
              
-             (blue-raw (if use-harm (matugen-theme--blend modus-blue bg 0.70)
-                         (or (cdr (assoc 'blue colors)) (cdr (assoc 'palette-4 colors)) bg)))
-             (blue (matugen-theme--ensure-contrast blue-raw bg is-dark 4.5))
+             (blue-raw (cond (use-harm (matugen-theme--blend modus-blue bg 0.70))
+                             (use-neon (matugen-theme--neonize modus-blue is-dark))
+                             (t (or (cdr (assoc 'blue colors)) (cdr (assoc 'palette-4 colors)) bg))))
+             (blue (if use-neon blue-raw (matugen-theme--ensure-contrast blue-raw bg is-dark 4.5)))
              
-             (magenta-raw (if use-harm (matugen-theme--blend modus-magenta bg 0.70)
-                            (or (cdr (assoc 'magenta colors)) (cdr (assoc 'palette-5 colors)) bg)))
-             (magenta (matugen-theme--ensure-contrast magenta-raw bg is-dark 4.5))
+             (magenta-raw (cond (use-harm (matugen-theme--blend modus-magenta bg 0.70))
+                                (use-neon (matugen-theme--neonize modus-magenta is-dark))
+                                (t (or (cdr (assoc 'magenta colors)) (cdr (assoc 'palette-5 colors)) bg))))
+             (magenta (if use-neon magenta-raw (matugen-theme--ensure-contrast magenta-raw bg is-dark 4.5)))
              
-             (cyan-raw (if use-harm (matugen-theme--blend modus-cyan bg 0.70)
-                         (or (cdr (assoc 'cyan colors)) (cdr (assoc 'palette-6 colors)) bg)))
-             (cyan (matugen-theme--ensure-contrast cyan-raw bg is-dark 4.5))
+             (cyan-raw (cond (use-harm (matugen-theme--blend modus-cyan bg 0.70))
+                             (use-neon (matugen-theme--neonize modus-cyan is-dark))
+                             (t (or (cdr (assoc 'cyan colors)) (cdr (assoc 'palette-6 colors)) bg))))
+             (cyan (if use-neon cyan-raw (matugen-theme--ensure-contrast cyan-raw bg is-dark 4.5)))
              
              ;; Force Emacs to adopt the appropriate Modus base theme.
              (base-theme (if is-dark 'modus-vivendi 'modus-operandi))
@@ -259,7 +277,7 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
           (setq modus-themes-common-palette-overrides
                 (cond ((eq matugen-theme-style 'accent) accent-overrides)
                       ((eq matugen-theme-style 'background) bg-overrides)
-                      ((eq matugen-theme-style 'harmonized) (append bg-overrides accent-overrides))
+                      ((memq matugen-theme-style '(harmonized neon)) (append bg-overrides accent-overrides))
                       (t (append bg-overrides accent-overrides)))))
         
         ;; Purge all currently active themes to prevent face clashing
