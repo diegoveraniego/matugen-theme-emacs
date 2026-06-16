@@ -477,10 +477,13 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
   (if matugen-theme-mode
       (let ((dir (file-name-directory (matugen-theme--get-file-path))))
         (when (file-exists-p dir)
-          ;; Initial load delayed until UI frame is ready
-          (if after-init-time
-              (matugen-theme-reload)
-            (add-hook 'after-init-hook #'matugen-theme-reload))
+          ;; Initial load delayed until UI frame is completely drawn
+          ;; to ensure frame-parameters (like dark/light mode) are available
+          (if (display-graphic-p)
+              (run-with-idle-timer 0.1 nil #'matugen-theme-reload)
+            (if after-init-time
+                (matugen-theme-reload)
+              (add-hook 'emacs-startup-hook (lambda () (run-with-idle-timer 0.1 nil #'matugen-theme-reload)))))
           
           ;; Setup file watcher
           (setq matugen-theme--file-watch-descriptor
