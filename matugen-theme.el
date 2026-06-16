@@ -88,7 +88,7 @@ Uses pure mathematics to avoid Emacs daemon frame approximation bugs."
          (l (nth 2 hsl))
          (new-l (if lighten (+ l (/ percent 100.0)) (- l (/ percent 100.0))))
          (clamped-l (max 0.0 (min 1.0 new-l)))
-         (new-rgb (apply #'color-hsl-to-rgb h s clamped-l)))
+         (new-rgb (color-hsl-to-rgb h s clamped-l)))
     (matugen-theme--rgb-to-hex new-rgb)))
 
 (defun matugen-theme--is-dark-color (hex)
