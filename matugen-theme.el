@@ -33,6 +33,7 @@
                  (const :tag "Accent only" accent)
                  (const :tag "Background only" background)
                  (const :tag "Harmonized" harmonized)
+                 (const :tag "Monochrome" monochrome)
                  (const :tag "Neon" neon))
   :group 'matugen-theme)
 
@@ -178,12 +179,12 @@ If LIGHTEN is non-nil, the colour is lightened; otherwise, darkened."
              ;; We use palette-1 or foreground as the 'seed' color to generate the wheel
              (seed (or (cdr (assoc 'palette-1 colors)) fg-main))
              
-             (native-red (or (cdr (assoc 'palette-1 colors)) seed))
-             (native-green (or (cdr (assoc 'palette-2 colors)) seed))
-             (native-yellow (or (cdr (assoc 'palette-3 colors)) seed))
-             (native-blue (or (cdr (assoc 'palette-4 colors)) seed))
-             (native-magenta (or (cdr (assoc 'palette-5 colors)) seed))
-             (native-cyan (or (cdr (assoc 'palette-6 colors)) seed))
+             (native-red (if (eq matugen-theme-style 'monochrome) seed (or (cdr (assoc 'palette-1 colors)) seed)))
+             (native-green (if (eq matugen-theme-style 'monochrome) (matugen-theme--mod-color seed 10 (not is-dark)) (or (cdr (assoc 'palette-2 colors)) seed)))
+             (native-yellow (if (eq matugen-theme-style 'monochrome) (matugen-theme--mod-color seed 20 (not is-dark)) (or (cdr (assoc 'palette-3 colors)) seed)))
+             (native-blue (if (eq matugen-theme-style 'monochrome) (matugen-theme--mod-color seed 30 (not is-dark)) (or (cdr (assoc 'palette-4 colors)) seed)))
+             (native-magenta (if (eq matugen-theme-style 'monochrome) (matugen-theme--mod-color seed 40 (not is-dark)) (or (cdr (assoc 'palette-5 colors)) seed)))
+             (native-cyan (if (eq matugen-theme-style 'monochrome) (matugen-theme--mod-color seed 50 (not is-dark)) (or (cdr (assoc 'palette-6 colors)) seed)))
              
              ;; We apply the Neon/Harmonized style filter to your ACTUAL matugen colors
              (styled-red (matugen-theme--apply-style native-red is-dark matugen-theme-style bg))
@@ -301,7 +302,7 @@ If LIGHTEN is non-nil, the colour is lightened; otherwise, darkened."
   (interactive)
   (if (require 'consult nil t)
       (let* ((original-style matugen-theme-style)
-             (styles '(full accent background harmonized neon))
+             (styles '(full accent background harmonized monochrome neon))
              (selected
               (consult--read (mapcar #'symbol-name styles)
                              :prompt "Matugen Style: "
@@ -319,7 +320,7 @@ If LIGHTEN is non-nil, the colour is lightened; otherwise, darkened."
         (when selected
           (setq matugen-theme-style (intern selected))
           (matugen-theme-reload)))
-    (let* ((styles '(full accent background harmonized neon))
+    (let* ((styles '(full accent background harmonized monochrome neon))
            (selection (completing-read "Select Matugen Style: " (mapcar #'symbol-name styles) nil t)))
       (when selection
         (setq matugen-theme-style (intern selection))
